@@ -62,9 +62,5 @@ public class AuthController {
         return ResponseEntity.ok(new AuthenticationResponse(jwt));
     }
 
-    // ✅ Protected test route
-    @GetMapping("/home")
-    public ResponseEntity<String> welcome() {
-        return ResponseEntity.ok("Welcome! You're authenticated!");
-    }
+
 }
