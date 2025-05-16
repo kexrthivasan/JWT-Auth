@@ -16,49 +16,55 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component // Register this as a Spring bean
-@RequiredArgsConstructor // Lombok will inject final fields
+@Component // Marks this class as a Spring-managed component
+@RequiredArgsConstructor // Lombok generates a constructor with required arguments (i.e., final fields)
 public class JwtRequestFilter extends OncePerRequestFilter {
 
-    private final UserDetailsServiceImpl userDetailsService;
-    private final JwtUtil jwtUtil;
+    private final UserDetailsServiceImpl userDetailsService; // Service to load user details from DB
+    private final JwtUtil jwtUtil; // Utility class for JWT operations like extract/validate
 
-    // This method is called for every request to check for a valid JWT token
+    /**
+     * This method filters incoming HTTP requests and checks for a valid JWT token.
+     * If a valid token is found, it sets the authentication in the SecurityContext.
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization"); // Get Authorization header
-        String username = null;
-        String jwt = null;
+        // Get the Authorization header from the request
+        final String authHeader = request.getHeader("Authorization");
 
-        // JWT token is expected to be in the format "Bearer <token>"
+        String username = null; // To hold the username extracted from the token
+        String jwt = null;      // To hold the JWT token string
+
+        // Check if the header is not null and starts with "Bearer "
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwt = authHeader.substring(7); // Extract token by removing "Bearer "
-            username = jwtUtil.extractUsername(jwt); // Extract username from JWT
+            jwt = authHeader.substring(7); // Remove "Bearer " prefix to get the token
+            username = jwtUtil.extractUsername(jwt); // Extract username from the token
         }
 
-        // If username is extracted and SecurityContext is not yet authenticated
+        // If a username is extracted and there is no authentication already set in context
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // Load user details from the database using the username
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-            // Validate token against user details
+            // Validate the token using user details
             if (jwtUtil.validateToken(jwt, userDetails)) {
-                // Create authentication token and set it into SecurityContext
+                // Create an authentication token containing user details and roles
                 UsernamePasswordAuthenticationToken token =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
+                // Attach request details like IP and session ID
                 token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(token); // Authenticates the request
+                // Set the authentication in the context for this request
+                SecurityContextHolder.getContext().setAuthentication(token);
             }
         }
 
-        // Pass the request along the filter chain
+        // Continue processing the request through the remaining filters
         filterChain.doFilter(request, response);
-
-
     }
 }

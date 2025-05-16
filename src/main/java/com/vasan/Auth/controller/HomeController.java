@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HomeController {
 
     // ✅ Protected test route
-    @GetMapping("/home")
+    @GetMapping("/")
     public ResponseEntity<String> welcome() {
         return ResponseEntity.ok("Welcome! You're authenticated!");
     }
